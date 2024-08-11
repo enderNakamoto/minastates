@@ -125,3 +125,7 @@ and the older - https://docs.minaprotocol.com/zkapps/tutorials/offchain-storage
 
 could be confusing, perhaps they can be merged and differences pointed out.
 
+#Future Plans:
+
+Add a lot of questions to have a good simulation of the system, and incorporate MinaNFTs
+Perhaps a race to build Nukes based on research, manufactuing, and financial output of the nation could be added in the future.
