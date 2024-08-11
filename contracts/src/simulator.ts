@@ -15,7 +15,7 @@ import {
   
 import { Const } from './lib/consts';
 import { Error } from './lib/errors';
-import { Nation, IssueStatement, Issue, Choice } from './lib/models';
+import { Nation, IssueStatement, Issue, Choice, IssueConsequence } from './lib/models';
 
 /**
  *  Off-chain state setup
@@ -24,6 +24,7 @@ const { OffchainState, OffchainStateCommitments } = Experimental;
 const offchainState = OffchainState({
     nations: OffchainState.Map(PublicKey, Nation),
     issueStatements: OffchainState.Map(Field, IssueStatement),
+    issueConsequences: OffchainState.Map(Field, IssueConsequence),
     nationChoices: OffchainState.Map(PublicKey, Choice), 
 });
 class StateProof extends offchainState.Proof {}
@@ -199,7 +200,7 @@ export class SimulatorZkApp extends SmartContract {
         const choiceNullRoot = this.choiceNullifierRoot.getAndRequireEquals();
         const [derivedRootChoice, derivedKeyChoice] = choiceNullifierWitness.computeRootAndKeyV2(Const.EMPTY_FIELD);
         derivedRootChoice.assertEquals(choiceNullRoot, Error.CHOICE_ALREADY_MADE);
-        derivedKeyChoice.assertEquals(choiceId, Error.CHOICE_ALREADY_MADE);
+        derivedKeyChoice.assertEquals(choiceKey, Error.CHOICE_ALREADY_MADE);
 
         // update off-chain state
         const choice = new Choice({
@@ -219,22 +220,43 @@ export class SimulatorZkApp extends SmartContract {
      * @param nation - The new state of the nation
      */
     @method async revealIssues(
+        issues: Issue[]
     ) {
         // verify that the caller is the simulation master
-        // reveal the issue off-chain
-        // update the number of revealed issues
+        const sender = this.sender.getAndRequireSignature();
+        const senderKey = Poseidon.hash(sender.toFields());
+        const simMaster = this.simulationMaster.getAndRequireEquals();
+        simMaster.assertEquals(senderKey, Error.SIMULATION_MASTER_ONLY);
+
+        // verify that the issues are not already revealed
+        const isRevealed = this.issuesRevealed.getAndRequireEquals();
+        isRevealed.assertEquals(Const.EMPTY_FIELD, Error.ISSUE_ALREADY_REVEALED);
+
+        // verify that the issues are valid
+        const issueHashes = issues.map(issue => Poseidon.hash(Issue.toFields(issue)));
+        const issueHash = Poseidon.hash(issueHashes);
+        const storedIssueHash = this.issuesHash.getAndRequireEquals();
+        issueHash.assertEquals(storedIssueHash, Error.INVALID_ISSUES_DURING_REVEAL);
+
+        // store the issue consequences in the off-chain state (reveal the issues)
+        for (let i = 0; i < issues.length; i++) {
+            const issue = issues[i];
+            const issueId = Field(i);
+            offchainState.fields.issueConsequences.overwrite(issueId, issue.consequence);
+        }
+
         // update the merkle maps
-        // emit event
+        this.issuesRevealed.set(Const.FILLED);
     }
 
-    // @method async computeNationState(
-    // ) {
-    //     // verify that the caller is the owner of the nation
-    //     // verify that the nation is valid
-    //     // compute the nation state
-    //     // update off-chain state
-    //     // emit event
-    // }
+    @method async computeNationState(
+    ) {
+        // verify that the caller is the owner of the nation
+        // verify that the nation is valid
+        // compute the nation state
+        // update off-chain state
+        // emit event
+    }
 
 
     /**
