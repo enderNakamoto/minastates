@@ -20,7 +20,7 @@ import { Nation, Issue } from './lib/models';
 /**
  *  Off-chain state setup
 */
-const { OffchainState } = Experimental;
+const { OffchainState, OffchainStateCommitments } = Experimental;
 const offchainState = OffchainState({
     nations: OffchainState.Map(PublicKey, Nation),
 });
@@ -33,6 +33,7 @@ class StateProof extends offchainState.Proof {}
  */
 
 export class SimulatorZkApp extends SmartContract {
+
    /**
    * State variables. on-chain game state (max 8 fields)
    */
@@ -45,7 +46,9 @@ export class SimulatorZkApp extends SmartContract {
     /** 
      * Off-chain states
      */
-    @state(OffchainState.Commitments) offchainState = offchainState.commitments();
+
+    // this state is used to store the off-chain state commitments internally
+    @state(OffchainStateCommitments) offchainState = State(OffchainStateCommitments.empty());
 
    /**
    * Constructor
@@ -91,10 +94,34 @@ export class SimulatorZkApp extends SmartContract {
         derivedKey.assertEquals(senderKey, Error.NATION_ALREADY_EXISTS);
 
 
-        // initiate a new nation
-
+        // initiate a new nation and store it in the off-chain state
+        const nation = new Nation({
+            name: name,
+            population: Const.INIT_POPULATION,
+            gdp: Const.INIT_GDP,
+            militaryStrength: Const.INIT_MILITARY_STRENGTH,
+            PoliticalFreedom: Const.INIT_FREEDOM,
+            PersonalFreedom: Const.INIT_FREEDOM,
+            EconomicFreedom: Const.INIT_FREEDOM,
+            researchOutput: Const.INIT_OUTPUT,
+            industrialOutput: Const.INIT_OUTPUT,
+            taxRate: Const.INIT_TAX,
+            deathRate: Const.INIT_DEATH_RATE,
+            birthRate: Const.INIT_BIRTH_RATE,
+            militaryPersonnel: Const.INIT_MILITARY_PERSONNEL,
+            welfareBudget: Const.INIT_WELFARE,
+            militaryBudget: Const.INIT_MILITARY_BUDGET,
+            educationBudget: Const.INIT_EDUCATION_BUDGET,
+            wealthGapIndex: Const.INIT_WEALTHGAP,
+            crimeIndex: Const.INIT_CRIME,
+            happinessNationalIndex: Const.INIT_HNI,
+            inclusitivityIndex: Const.INIT_INCLUSITIVITY_INDEX,
+            civilRightsIndex: Const.INIT_CIVIL_RIGHTS_INDEX,
+            manufacturingIndex: Const.INIT_MANUFACTURING_INDEX,
+            environmentIndex: Const.INIT_ENVIRONMENT_INDEX,
+        });
+        offchainState.fields.nations.overwrite(sender, nation);
         
-
         // update the merkle maps
         const [updatedRoot, _ ] = playerNullifierWitness.computeRootAndKeyV2(Const.FILLED);
         this.playerNullifierRoot.set(updatedRoot);
@@ -153,4 +180,14 @@ export class SimulatorZkApp extends SmartContract {
     // }
 
 
+    /**
+     * Settle the off-chain state
+     * @param proof - The proof of the off-chain state
+     */
+    @method async settle(proof: StateProof) {
+        await offchainState.settle(proof);
+    }
 }
+
+// connect contract to off-chain state
+offchainState.setContractClass(SimulatorZkApp);

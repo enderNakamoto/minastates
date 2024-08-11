@@ -1,4 +1,4 @@
-import { Struct, Field, Provable } from 'o1js';
+import { Struct, Field, Provable, CircuitString } from 'o1js';
 
 export class SimulationState extends Struct({
     
@@ -28,8 +28,7 @@ export class Issue extends Struct({
   };
 
  export class Nation extends Struct({
-    id: Field,
-    name: Field,
+    name: CircuitString,
     population: Field,
     gdp: Field,
     militaryStrength: Field,
