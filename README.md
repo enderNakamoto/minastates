@@ -1,5 +1,17 @@
 ![alt text](image.png)
 
+# Table of Contents
+
+- [MinaStates - Government Simulation Game](#minastates---government-simulation-game)
+- [Game Overview](#game-overview)
+  * [Step 1](#step-1)
+  * [Step 2](#step-2)
+  * [Step 3](#step-3)
+  * [Step 4](#step-4)
+  * [Step 5](#step-5)
+- [On-Chain and Off-Chain States](#on-chain-and-off-chain-states)
+  * [Thoughts on Off-Chain State API](#thoughts-on-off-chain-state-api)
+
 # MinaStates - Government Simulation Game
 
 MinaStates is a nation-building simulation game where you can shape a country based on your political ideals. Nurture and protect your citizens, or choose to rule with an iron fist. The choice is yours. We use ZK(O1js) to verify that the rules of the simulation does not change midgame. 
