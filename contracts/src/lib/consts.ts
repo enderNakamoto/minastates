@@ -1,8 +1,22 @@
-import { Field } from 'o1js';
+import { 
+    Field,
+    MerkleMap,
+    MerkleTree,
+ } from 'o1js';
+
+// Constants for the simulation
+const emptyMerkleMap = new MerkleMap();
+const emptyMerkleTree12 = new MerkleTree(12);
 
 export namespace Const {
-    // empty values 
+    
+    / // empty values
+    export const EMPTY_MAP_ROOT = emptyMerkleMap.getRoot();
+    export const EMPTY_TREE_ROOT12 = emptyMerkleTree12.getRoot();
     export const EMPTY_FIELD = Field(0);
+  
+    // filled values
+    export const FILLED = Field(1);
 
     // initial derivative values of a nation 
     export const INIT_OUTPUT = Field(1);

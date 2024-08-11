@@ -1,5 +1,12 @@
 import { Struct, Field, Provable } from 'o1js';
 
+export class SimulationState extends Struct({
+    
+}) {
+
+
+};
+
 export class Choice extends Struct({
     id: Field,
     choiceHash: Field,
