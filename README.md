@@ -106,3 +106,10 @@ offchainState.setContractClass(SimulatorZkApp);
 ```
 
 * The examples would be lot more legible if the code, and the testing were separated in two different files.
+
+* In the Docs, Having both newer Offchain Storage doc - https://docs.minaprotocol.com/zkapps/writing-a-zkapp/feature-overview/offchain-storage
+
+and the older - https://docs.minaprotocol.com/zkapps/tutorials/offchain-storage
+
+could be confusing, perhaps they can be merged and differences pointed out.
+
