@@ -1,31 +1,24 @@
-import { Struct, Field, Provable, CircuitString } from 'o1js';
-
-export class SimulationState extends Struct({
-    
-}) {
-
-
-};
+import { Struct, Field, Provable, CircuitString, state } from 'o1js';
 
 export class Choice extends Struct({
-    id: Field,
-    choiceHash: Field,
-    outcomeBits: Field,
-  }){
-    totalCost(){
-        return Field(1);
-    };
-  };
+    issueId: Field,
+    choiceId: Field,
+}){}
+
+export class IssueStatement extends Struct({
+    statement: CircuitString,
+    choiceStatements: Provable.Array(CircuitString, 3),
+}){};
+
+export class IssueConsequence extends Struct({
+    effect: Provable.Array(Field, 10),
+    value: Provable.Array(Field, 10)
+}){}
 
 export class Issue extends Struct({
-    id: Field,
-    issueHash: Field,
-    choices: Provable.Array(Choice, 3),
-  }){
-    totalCost(){
-        return Field(1);
-    };
-  };
+    statement: IssueStatement,
+    consequence: IssueConsequence,
+}){}
 
  export class Nation extends Struct({
     name: CircuitString,
@@ -51,8 +44,4 @@ export class Issue extends Struct({
     civilRightsIndex: Field,
     manufacturingIndex: Field,
     environmentIndex: Field,
-  }){
-    totalCost(){
-        return Field(1);
-    };
-  } 
+  }){}; 

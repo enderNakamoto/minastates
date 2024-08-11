@@ -15,7 +15,7 @@ import {
   
 import { Const } from './lib/consts';
 import { Error } from './lib/errors';
-import { Nation, Issue } from './lib/models';
+import { Nation, IssueStatement, Issue, Choice } from './lib/models';
 
 /**
  *  Off-chain state setup
@@ -23,6 +23,8 @@ import { Nation, Issue } from './lib/models';
 const { OffchainState, OffchainStateCommitments } = Experimental;
 const offchainState = OffchainState({
     nations: OffchainState.Map(PublicKey, Nation),
+    issueStatements: OffchainState.Map(Field, IssueStatement),
+    nationChoices: OffchainState.Map(PublicKey, Choice), 
 });
 class StateProof extends offchainState.Proof {}
 
@@ -39,10 +41,13 @@ export class SimulatorZkApp extends SmartContract {
    */
     @state(Field) numberOfNations = State<Field>(); // The number of nations in the simulation
     @state(Field) numberOfIssues = State<Field>(); // The number of issues in the simulation
-    @state(Field) numberOfRevealedIssues = State<Field>(); // The number of issues revealed in the simulation, by the simulation master
-    @state(PublicKey) simulationMaster = State<PublicKey>(); // The player who created the simulation
-    @state(Field) playerNullifierRoot = State<Field>(); // MerkleMap <playerAddress -> NationDetailsHash>
-
+    @state(Field) issuesRevealed = State<Field>(); // The number of issues revealed in the simulation, by the simulation master
+    @state(Field) issuesHash = State<Field>(); // Issues hash stored on-chain, to check validity later
+    @state(Field) simulationMaster = State<Field>(); // The player who created the simulation
+    @state(Field) playerNullifierRoot = State<Field>(); // MerkleMap <playerAddress -> Field(0)|Field(1)>
+    @state(Field) choiceNullifierRoot = State<Field>(); // MerkleMap <IssueId(Combination of Player, Issue) -> Field(0)|Field(1)>
+    
+    
     /** 
      * Off-chain states
      */
@@ -55,27 +60,53 @@ export class SimulatorZkApp extends SmartContract {
    */
     init() {
         super.init();
+
         this.numberOfIssues.set(Const.EMPTY_FIELD);
-        this.numberOfRevealedIssues.set(Const.EMPTY_FIELD);
+        this.issuesRevealed.set(Const.EMPTY_FIELD);
+        this.issuesHash.set(Const.EMPTY_FIELD);
         this.numberOfNations.set(Const.EMPTY_FIELD);
-        this.simulationMaster.set(PublicKey.empty());
+        this.simulationMaster.set(Const.EMPTY_KEY);
         this.playerNullifierRoot.set(Const.EMPTY_MAP_ROOT);
+
     }
 
     /**
      * Verify that the caller is the simulation master
-     * @param issues - Array of 3 issues
+     * @param issues - Array of issues
     */
-    // @method async createSimulation() {
-    //     // make sure that the simulation does not exist
-    //     const numIss = this.numberOfIssues.getAndRequireEquals();
-    //     numIss.assertEquals(
-    //         Const.EMPTY_FIELD,
-    //         Error.SIMULATION_EXISTS
-    //       );
+    @method async createSimulation(
+        issues: Issue[]
+    ) {
 
-    //     // initiate a new simulation
-    // }
+        // make sure that no issues have been created yet
+        const numIssues = this.numberOfIssues.getAndRequireEquals();
+        numIssues.assertEquals(Const.EMPTY_FIELD, Error.SIMULATION_ALREADY_EXISTS);
+
+        // make sure no simulation master has been set yet
+        const simMaster = this.simulationMaster.getAndRequireEquals();
+        simMaster.assertEquals(Const.EMPTY_KEY, Error.SIMULATION_ALREADY_EXISTS);
+
+        // store issue statements in the off-chain state
+        for (let i = 0; i < issues.length; i++) {
+            const issue = issues[i];
+            const issueId = Field(i);
+            offchainState.fields.issueStatements.overwrite(issueId, issue.statement);
+        }
+
+        // store issue hash on-chain to check validity later
+        const issueHashes = issues.map(issue => Poseidon.hash(Issue.toFields(issue)));
+        const issueHash = Poseidon.hash(issueHashes);
+        this.issuesHash.set(issueHash);
+
+        // set the simulation master
+        const sender = this.sender.getAndRequireSignature();
+        const senderKey = Poseidon.hash(sender.toFields());
+        this.simulationMaster.set(senderKey);
+
+        // update the number of issues
+        const numberOfIssues = Field(issues.length);
+        this.numberOfIssues.set(numberOfIssues);
+    }
 
     /**
      * Create a new nation in the simulation
@@ -132,43 +163,69 @@ export class SimulatorZkApp extends SmartContract {
     }
 
     /**
-     * Create a new issue in the simulation
-     * @param statementHash - The statement hash of the issue
-     * @param choices - The choices for the issue
-     * 
-    */
-    // @method async createIssue(
-    // ) {
-    //     // verify that the caller is the simulation master
-    //     // initiate a new issue
-    //     // update the number of issues
-    //     // update the merkle maps
-    //     // update off-chain state
-    //     // emit event
+     *  Make a choice for an issue
+     * @param issueId - The id of the issue
+     * @param choice - The choice made by the nation
+     */
+    @method async makeChoice(
+        issueId: Field,
+        choiceId: Field,
+        playerNullifierWitness: MerkleMapWitness,
+        choiceNullifierWitness: MerkleMapWitness
+    ) {
+        // verify that caller has a nation
+        const sender = this.sender.getAndRequireSignature();
+        const senderKey = Poseidon.hash(sender.toFields());
+        const playerNullRoot = this.playerNullifierRoot.getAndRequireEquals();
+        const [derivedRoot, derivedKey] = playerNullifierWitness.computeRootAndKeyV2(Const.FILLED);
+        derivedRoot.assertEquals(playerNullRoot,Error.PLAYER_HAS_NO_NATION);
+        derivedKey.assertEquals(senderKey, Error.PLAYER_HAS_NO_NATION);
 
-    // }
+        // get the nation
+        const nation = await offchainState.fields.nations.get(sender)
 
-    // @method async makeChoice(
-    // ) {
-    //     // verify that the caller is the owner of the nation
-    //     // verify that the issue is not already revealed
-    //     // verify that the issue is valid
-    //     // verify that the choice is valid
-    //     // update the merkle maps
-    //     // update off-chain state
-    //     // emit event
-    // }
+        // verify that the issue is not already revealed
+        const revlealed = this.issuesRevealed.getAndRequireEquals();
+        revlealed.assertEquals(Const.EMPTY_FIELD, Error.ISSUE_ALREADY_REVEALED);
 
-    // @method async revealIssue(
-    // ) {
-    //     // verify that the caller is the simulation master
-    //     // reveal the issue off-chain
-    //     // update the number of revealed issues
-    //     // update the merkle maps
-    //     // emit event
-    // }
+        // verify that the issue is valid
+        issueId.assertLessThan(this.numberOfIssues.getAndRequireEquals(), Error.INVALID_ISSUE);
 
-    
+        // verify that the choice is valid
+        choiceId.assertLessThan(Field(3), Error.INVALID_CHOICE);
+
+        // verify that the choice is not already made
+        const choiceKey = Poseidon.hash([senderKey, issueId]);
+        const choiceNullRoot = this.choiceNullifierRoot.getAndRequireEquals();
+        const [derivedRootChoice, derivedKeyChoice] = choiceNullifierWitness.computeRootAndKeyV2(Const.EMPTY_FIELD);
+        derivedRootChoice.assertEquals(choiceNullRoot, Error.CHOICE_ALREADY_MADE);
+        derivedKeyChoice.assertEquals(choiceId, Error.CHOICE_ALREADY_MADE);
+
+        // update off-chain state
+        const choice = new Choice({
+            issueId: issueId,
+            choiceId: choiceId,
+        });
+        offchainState.fields.nationChoices.overwrite(sender, choice);
+
+        // update the merkle maps
+        const [updatedRoot, _ ] = choiceNullifierWitness.computeRootAndKeyV2(Const.FILLED);
+        this.choiceNullifierRoot.set(updatedRoot);
+    }    
+
+    /**
+     * Reveal the issues of the simulation, by the simulation master
+     * after revealing the issues, the nations can compute their state
+     * @param nation - The new state of the nation
+     */
+    @method async revealIssues(
+    ) {
+        // verify that the caller is the simulation master
+        // reveal the issue off-chain
+        // update the number of revealed issues
+        // update the merkle maps
+        // emit event
+    }
 
     // @method async computeNationState(
     // ) {

@@ -1,5 +1,7 @@
 import { 
     Field,
+    Poseidon,
+    PublicKey,
     MerkleMap,
     MerkleTree,
  } from 'o1js';
@@ -7,6 +9,7 @@ import {
 // Constants for the simulation
 const emptyMerkleMap = new MerkleMap();
 const emptyMerkleTree12 = new MerkleTree(12);
+const emptyPublicKey = PublicKey.empty();
 
 export namespace Const {
 
@@ -14,6 +17,7 @@ export namespace Const {
     export const EMPTY_MAP_ROOT = emptyMerkleMap.getRoot();
     export const EMPTY_TREE_ROOT12 = emptyMerkleTree12.getRoot();
     export const EMPTY_FIELD = Field(0);
+    export const EMPTY_KEY = Poseidon.hash(emptyPublicKey.toFields());
   
     // filled values
     export const FILLED = Field(1);
