@@ -1,40 +1,46 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+![alt text](image.png)
 
-## Getting Started
+# MinaStates - Government Simulation Game
 
-First, run the development server:
+MinaStates is a nation-building simulation game where you can shape a country based on your political ideals. Nurture and protect your citizens, or choose to rule with an iron fist. The choice is yours. We use ZK(O1js) to verify that the rules of the simulation does not change midgame. 
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Inspired by Max Barry's - https://www.nationstates.net/
+
+How the simulation works: 
+
+As you play the game, you have to make governmental decisions - from big to downright silly: 
+
+Examples of Decisions and Choices: 
+
+```
+Issue: Should Democracy Be Compulsory?
+
+Choices:
+1. "Compulsory voting makes about as much sense as having the death penalty for attempted suicide," says a civil rights activist"You can't force people to be free! You can only give them the choice. 
+
+2. "It's not contradictory at all," argues political commentator. "The fact is, if not everyone votes, the outcome isn't truly representative. Some groups--like elderly gun nuts--vote more often than others. That's why we always end up with such terrible politicians."
+
+3. "This raises an interesting issue," says your brother. "And that is: why do we need elections, anyway? Seems to me it would be much simpler if you just decided what was right
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Based on Choices Picked, Economic, Political and Personal Freedom gets affected. Every Choice has both positive effect and negative effect on various things
+![alt text](image-2.png)
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+As you keep answering the questions, your country might become a dictatorship or a capitalist utopia! 
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+# Game Overview
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+## Step 1
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+First the game Simulation Initiated: 
+![alt text](image-1.png)
 
-## Learn More
+Simulation is Initiated with a bunch of governmental issues and choices.
 
-To learn more about Next.js, take a look at the following resources:
+## Step 2 
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+A Player joins and created a nation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+![alt text](image-3.png)
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## Step 3 
