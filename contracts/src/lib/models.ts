@@ -21,9 +21,9 @@ export class ChoiceConsequence extends Struct({
  * choiceConsequences - the consequences of the choices
  */
 export class IssueConsequence extends Struct({
-    "0": ChoiceConsequence,
-    "1": ChoiceConsequence,
-    "2": ChoiceConsequence,
+    one: ChoiceConsequence,
+    two: ChoiceConsequence,
+    three: ChoiceConsequence,
 }){}
 
 /**

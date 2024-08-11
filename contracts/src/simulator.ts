@@ -11,12 +11,13 @@ import {
     Provable,
     CircuitString,
     Experimental,
-    UInt64
+    UInt64,
+    Bool
   } from 'o1js';
   
 import { Const } from './lib/consts';
 import { Error } from './lib/errors';
-import { Nation, IssueStatement, Issue, IssueConsequence } from './lib/models';
+import { Nation, IssueStatement, Issue, ChoiceConsequence, IssueConsequence } from './lib/models';
 
 /**
  *  Off-chain state setup
@@ -267,17 +268,20 @@ export class SimulatorZkApp extends SmartContract {
             // get the choice made by the nation
             const issueId = Field(i);
             const choiceKey = Poseidon.hash([senderKey, issueId]);
-            const choiceId = (await offchainState.fields.nationChoices.get(choiceKey)).orElse(Field(0));
-            const choice  = choiceId.toString();
-            
+            const choiceId = await offchainState.fields.nationChoices.get(choiceKey);
+     
             // compute state based on the choice
             const consequence = await offchainState.fields.issueConsequences.get(issueId);
-            const choiceConsequence = consequence.a;
-
-        }   
-
-
-        
+            const choiceConsequenceOne = consequence.value.one;
+            const value = choiceConsequenceOne.value;
+            
+            nation.value.PoliticalFreedom = nation.value.PoliticalFreedom.add(value[3]);
+            nation.value.PersonalFreedom = nation.value.PersonalFreedom.add(value[4]);
+            nation.value.EconomicFreedom = nation.value.EconomicFreedom.add(value[5]);
+            
+            // update offchain nation for every issue
+            offchainState.fields.nations.overwrite(sender, new Nation(nation.value));
+        }
     }
 
 
