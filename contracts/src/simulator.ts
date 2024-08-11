@@ -10,25 +10,25 @@ import {
     Poseidon,
     Provable,
     CircuitString,
-    Experimental
+    Experimental,
+    UInt64
   } from 'o1js';
   
 import { Const } from './lib/consts';
 import { Error } from './lib/errors';
-import { Nation, IssueStatement, Issue, Choice, IssueConsequence } from './lib/models';
+import { Nation, IssueStatement, Issue, IssueConsequence } from './lib/models';
 
 /**
  *  Off-chain state setup
 */
 const { OffchainState, OffchainStateCommitments } = Experimental;
 const offchainState = OffchainState({
-    nations: OffchainState.Map(PublicKey, Nation),
-    issueStatements: OffchainState.Map(Field, IssueStatement),
-    issueConsequences: OffchainState.Map(Field, IssueConsequence),
-    nationChoices: OffchainState.Map(PublicKey, Choice), 
+    nations: OffchainState.Map(PublicKey, Nation), // map is (playerAddress -> Nation)
+    issueStatements: OffchainState.Map(Field, IssueStatement), // map is (issueId -> IssueStatement)
+    issueConsequences: OffchainState.Map(Field, IssueConsequence), // map is (issueId -> IssueConsequence)
+    nationChoices: OffchainState.Map(Field, Field),  // map is (choiceKey -> ChoiceId)
 });
 class StateProof extends offchainState.Proof {}
-
 
 /**
  * ZKAPP for the simulator
@@ -36,7 +36,6 @@ class StateProof extends offchainState.Proof {}
  */
 
 export class SimulatorZkApp extends SmartContract {
-
    /**
    * State variables. on-chain game state (max 8 fields)
    */
@@ -166,7 +165,9 @@ export class SimulatorZkApp extends SmartContract {
     /**
      *  Make a choice for an issue
      * @param issueId - The id of the issue
-     * @param choice - The choice made by the nation
+     * @param choiceId - The choice made by the nation
+     * @param playerNullifierWitness - The witness for the player nullifier
+     * @param choiceNullifierWitness - The witness for the choice nullifier
      */
     @method async makeChoice(
         issueId: Field,
@@ -185,9 +186,9 @@ export class SimulatorZkApp extends SmartContract {
         // get the nation
         const nation = await offchainState.fields.nations.get(sender)
 
-        // verify that the issue is not already revealed
-        const revlealed = this.issuesRevealed.getAndRequireEquals();
-        revlealed.assertEquals(Const.EMPTY_FIELD, Error.ISSUE_ALREADY_REVEALED);
+        // verify that the issues are not already revealed
+        const isRevealed = this.issuesRevealed.getAndRequireEquals();
+        isRevealed.assertEquals(Const.EMPTY_FIELD, Error.ISSUE_ALREADY_REVEALED);
 
         // verify that the issue is valid
         issueId.assertLessThan(this.numberOfIssues.getAndRequireEquals(), Error.INVALID_ISSUE);
@@ -203,11 +204,7 @@ export class SimulatorZkApp extends SmartContract {
         derivedKeyChoice.assertEquals(choiceKey, Error.CHOICE_ALREADY_MADE);
 
         // update off-chain state
-        const choice = new Choice({
-            issueId: issueId,
-            choiceId: choiceId,
-        });
-        offchainState.fields.nationChoices.overwrite(sender, choice);
+        offchainState.fields.nationChoices.overwrite(choiceKey, choiceId);
 
         // update the merkle maps
         const [updatedRoot, _ ] = choiceNullifierWitness.computeRootAndKeyV2(Const.FILLED);
@@ -250,12 +247,37 @@ export class SimulatorZkApp extends SmartContract {
     }
 
     @method async computeNationState(
+        playerNullifierWitness: MerkleMapWitness
     ) {
-        // verify that the caller is the owner of the nation
-        // verify that the nation is valid
-        // compute the nation state
-        // update off-chain state
-        // emit event
+        // verify that caller has a nation
+        const sender = this.sender.getAndRequireSignature();
+        const senderKey = Poseidon.hash(sender.toFields());
+        const playerNullRoot = this.playerNullifierRoot.getAndRequireEquals();
+        const [derivedRoot, derivedKey] = playerNullifierWitness.computeRootAndKeyV2(Const.FILLED);
+        derivedRoot.assertEquals(playerNullRoot,Error.PLAYER_HAS_NO_NATION);
+        derivedKey.assertEquals(senderKey, Error.PLAYER_HAS_NO_NATION);
+
+        // get the nation
+        const nation = await offchainState.fields.nations.get(sender)
+        const numIssues = this.numberOfIssues.getAndRequireEquals();
+        
+        // iterate over the issues
+        for (let i = 0; i < numIssues.toBigInt(); i++) {
+
+            // get the choice made by the nation
+            const issueId = Field(i);
+            const choiceKey = Poseidon.hash([senderKey, issueId]);
+            const choiceId = (await offchainState.fields.nationChoices.get(choiceKey)).orElse(Field(0));
+            const choice  = choiceId.toString();
+            
+            // compute state based on the choice
+            const consequence = await offchainState.fields.issueConsequences.get(issueId);
+            const choiceConsequence = consequence.a;
+
+        }   
+
+
+        
     }
 
 

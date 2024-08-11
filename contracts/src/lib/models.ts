@@ -1,20 +1,36 @@
 import { Struct, Field, Provable, CircuitString, state } from 'o1js';
 
-export class Choice extends Struct({
-    issueId: Field,
-    choiceId: Field,
-}){}
 
 export class IssueStatement extends Struct({
     statement: CircuitString,
     choiceStatements: Provable.Array(CircuitString, 3),
 }){};
 
-export class IssueConsequence extends Struct({
+/**
+ * The consequence of an choice, in the issue
+ * effect - the effect of the choice, positive or negative
+ * value - the delta value of the effect
+ */
+export class ChoiceConsequence extends Struct({
     effect: Provable.Array(Field, 10),
     value: Provable.Array(Field, 10)
 }){}
 
+/**
+ * The consequence of an issue
+ * choiceConsequences - the consequences of the choices
+ */
+export class IssueConsequence extends Struct({
+    "0": ChoiceConsequence,
+    "1": ChoiceConsequence,
+    "2": ChoiceConsequence,
+}){}
+
+/**
+ * An issue in the game
+ * statement - the statement of the issue
+ * consequence - the consequences of the issue choices
+ */
 export class Issue extends Struct({
     statement: IssueStatement,
     consequence: IssueConsequence,
