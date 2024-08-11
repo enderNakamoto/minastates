@@ -44,3 +44,65 @@ A Player joins and created a nation
 ![alt text](image-3.png)
 
 ## Step 3 
+
+Player Starts making Decisions for their Nation
+
+![alt text](image-4.png)
+
+## Step 4 
+Simulation Master Makes all the Rules Public 
+
+![alt text](image-5.png)
+
+## Step 5 
+Based on User Choices and Rules, the Nation's State is Calculated. 
+Now teh country can be a dictatorship or Democratic utopia!
+
+# On-Chain and Off-Chain States 
+
+For this Project, I used On-Chain (limited to 8 Field) states, mainly to record game state, and merkle roots needed for maintaining the integrity of the simulation 
+
+```
+   /**
+   * State variables. on-chain game state (max 8 fields)
+   */
+    @state(Field) numberOfNations = State<Field>(); // The number of nations in the simulation
+    @state(Field) numberOfIssues = State<Field>(); // The number of issues in the simulation
+    @state(Field) issuesRevealed = State<Field>(); // The number of issues revealed in the simulation, by the simulation master
+    @state(Field) issuesHash = State<Field>(); // Issues hash stored on-chain, to check validity later
+    @state(Field) simulationMaster = State<Field>(); // The player who created the simulation
+    @state(Field) playerNullifierRoot = State<Field>(); // MerkleMap <playerAddress -> Field(0)|Field(1)>
+    @state(Field) choiceNullifierRoot = State<Field>(); // MerkleMap <IssueId(Combination of Player, Issue) -> Field(0)|Field(1)>
+    
+    
+    /** 
+     * Off-chain states
+     */
+
+    // this state is used to store the off-chain state commitments internally
+    @state(OffchainStateCommitments) offchainState = State(OffchainStateCommitments.empty());
+```
+
+Whereas Off-Chain state does the heavy lifting of holding the Nation state and the Issues History
+
+```
+const offchainState = OffchainState({
+    nations: OffchainState.Map(PublicKey, Nation), // map is (playerAddress -> Nation)
+    issueStatements: OffchainState.Map(Field, IssueStatement), // map is (issueId -> IssueStatement)
+    issueConsequences: OffchainState.Map(Field, IssueConsequence), // map is (issueId -> IssueConsequence)
+    nationChoices: OffchainState.Map(Field, Field),  // map is (choiceKey -> ChoiceId)
+});
+```
+
+## Thoughts on Off-Chain State API
+
+* It is a decent alternative to Protokit's Onchain Key, Value Storage on the Rollup 
+* It is not very obvious from the docs on where the off-chain data is stored, is it Single Server solution ( I assumed so), more documentation on how to host it in Production environment would be useful
+* It is not very Obvious from the docs if the connection off-chain state an the zkapp needs to happen in zkApp, or it is only useful during testing...
+
+```
+// connect contract to off-chain state
+offchainState.setContractClass(SimulatorZkApp);
+```
+
+* The examples would be lot more legible if the code, and the testing were separated in two different files.
